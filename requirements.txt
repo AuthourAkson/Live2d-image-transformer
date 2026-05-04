@@ -1,0 +1,23 @@
+# === Live2D Image Transformer ===
+# Core pipeline: image → background removal → layer separation → auto-rigging → Live2D export
+
+# --- Image Processing ---
+rembg>=2.0.0          # Background removal (ONNX-based, offline)
+opencv-python>=4.8.0  # Image manipulation
+Pillow>=10.0.0        # Image I/O
+numpy>=1.24.0         # Array operations
+
+# --- AI / Segmentation ---
+mediapipe>=0.10.0     # Pose & face landmark detection
+onnxruntime>=1.15.0   # ONNX runtime (required by rembg)
+
+# --- Web UI ---
+fastapi>=0.104.0      # Web framework
+uvicorn>=0.24.0       # ASGI server
+python-multipart>=0.0.6  # File upload support
+jinja2>=3.1.0         # Template engine
+
+# --- Utilities ---
+pydantic>=2.0.0       # Data validation
+pyyaml>=6.0           # YAML config
+tqdm>=4.65.0          # Progress bars
