@@ -84,6 +84,16 @@ Output: Live2D Cubism 4 模型包
 
 ## 当前进度
 
+### ✅ 已完成 (v0.1.1)
+
+- [x] **依赖安装与验证** — 所有 Python 依赖成功安装 (rembg, mediapipe, opencv, fastapi 等)
+- [x] **MediaPipe API 迁移** — 从旧 `mediapipe.solutions` 迁移到新 `mediapipe.tasks` Task API
+- [x] **MediaPipe 模型配置** — 下载 pose_landmarker_lite.task 模型至 `models/` 目录
+- [x] **WSL 环境适配** — 编译 libGLESv2 库至 `lib/`，解决 GPU 依赖问题（软渲染 fallback）
+- [x] **Starlette 1.0 适配** — 修复 `TemplateResponse` API 签名变更 (request 参数前置)
+- [x] **管线验证** — 背景移除正常，MediaPipe 姿态检测正常启动
+- [x] **WebUI 健康检查** — `/api/health` 返回正常
+
 ### ✅ 已完成 (v0.1.0)
 
 - [x] 项目结构搭建
@@ -98,9 +108,9 @@ Output: Live2D Cubism 4 模型包
 
 ### 🔜 下一步计划
 
-1. **安装依赖 + 端到端测试** — 用真实图片跑通完整管线
+1. ✅ **端到端测试** — 用 tested_live2d.png 跑通完整管线: 14图层/12参数/Live2D导出
 2. **像素级分割优化** — 集成 SAM (Segment Anything) 替代简单椭圆 mask
-3. **面部细节** — 增加眉毛、瞳孔、口型变化参数
+3. **面部细节** — 增加眉毛、瞳孔、口型变化参数  
 4. **.moc3 生成** — 探索程序化生成 Live2D 二进制网格数据
 5. **部署支持** — Docker 化，方便一键部署
 
@@ -110,6 +120,8 @@ Output: Live2D Cubism 4 模型包
 - `.moc3` 仅为占位文件，需 Cubism Editor 生成正式版
 - MediaPipe 对遮挡/非正面姿态的检测效果有限
 - 纹理图集简单行式打包，图层过多可能浪费空间
+- **新增**: MediaPipe 需要真实人物照片（绘制/合成图姿态检测精度不足）
+- **新增**: 运行管线前需设置 `LD_LIBRARY_PATH=./lib:$LD_LIBRARY_PATH` (WSL环境)
 
 ---
 
@@ -144,4 +156,4 @@ git push origin main
 
 ---
 
-*最后更新: 2026-05-04 — v0.1.0 初始框架完成*
+*最后更新: 2026-05-05 — v0.1.1 依赖安装 & API 适配完成*

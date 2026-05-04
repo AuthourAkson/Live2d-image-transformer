@@ -5,16 +5,21 @@ __pycache__/
 *.egg-info/
 dist/
 build/
-.eggs/
 
-# Virtual env
+# Virtual environment
 venv/
-.venv/
-env/
+
+# Output
+output/
+
+# Test files
+test_input.jpg
+test_person.png
+test_photo.jpg
 
 # IDE
-.vscode/
 .idea/
+.vscode/
 *.swp
 *.swo
 
@@ -22,19 +27,6 @@ env/
 .DS_Store
 Thumbs.db
 
-# Output
-output/
-
-# Models (large files, auto-downloaded)
-*.onnx
-*.tflite
-
-# Environment
-.env
-.env.local
-
-# Jupyter
-.ipynb_checkpoints/
-
-# Logs
-*.log
+# Models (large binary files)
+models/
+lib/

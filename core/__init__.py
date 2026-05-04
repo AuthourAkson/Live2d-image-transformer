@@ -10,7 +10,7 @@ Pipeline:
     4. export         — Live2D Cubism 格式导出
 """
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 __author__ = "AuthourAkson"
 
 from .preprocessing.background_removal import remove_background

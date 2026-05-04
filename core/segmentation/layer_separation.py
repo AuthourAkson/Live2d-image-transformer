@@ -25,6 +25,7 @@ API:
 """
 
 import logging
+import os
 from pathlib import Path
 from typing import Optional
 from dataclasses import dataclass, field
@@ -110,33 +111,47 @@ LAYER_DEFS = [
 
 def _detect_landmarks(image: np.ndarray):
     """
-    使用 MediaPipe Pose 检测人物关键点。
+    使用 MediaPipe Pose 检测人物关键点（Tasks API）。
 
     Returns:
         list[dict]: 关键点列表，每个含 x, y, z, visibility
         None: 如果未检测到人物
+
+    注意：首次运行会自动下载 pose_landmarker.task 模型文件。
     """
     import mediapipe as mp
-    mp_pose = mp.solutions.pose
+    from mediapipe.tasks.python import BaseOptions
+    from mediapipe.tasks.python.vision import PoseLandmarker, PoseLandmarkerOptions, RunningMode
 
-    with mp_pose.Pose(
-        static_image_mode=True,
-        model_complexity=1,
-        min_detection_confidence=0.5,
-    ) as pose:
-        results = pose.process(image)
+    # 模型文件位置
+    model_path = os.environ.get(
+        "MEDIAPIPE_POSE_MODEL",
+        str(Path(__file__).resolve().parent.parent.parent / "models" / "pose_landmarker_lite.task")
+    )
 
-    if results.pose_landmarks is None:
+    options = PoseLandmarkerOptions(
+        base_options=BaseOptions(model_asset_path=model_path),
+        running_mode=RunningMode.IMAGE,
+        num_poses=1,
+        min_pose_detection_confidence=0.5,
+    )
+
+    with PoseLandmarker.create_from_options(options) as landmarker:
+        # 将 numpy 数组转为 MediaPipe Image
+        mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=image)
+        result = landmarker.detect(mp_image)
+
+    if not result.pose_landmarks:
         return None
 
     h, w, _ = image.shape
     landmarks = []
-    for lm in results.pose_landmarks.landmark:
+    for lm in result.pose_landmarks[0]:
         landmarks.append({
             "x": lm.x * w,
             "y": lm.y * h,
-            "z": lm.z,
-            "visibility": lm.visibility,
+            "z": lm.z or 0,
+            "visibility": lm.visibility or 0,
         })
     return landmarks
 

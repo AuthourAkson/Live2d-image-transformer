@@ -39,7 +39,7 @@ logger = logging.getLogger("webui")
 app = FastAPI(
     title="Live2D Image Transformer",
     description="将图片转换为 Live2D 可动模型",
-    version="0.1.0",
+    version="0.1.1",
 )
 
 # 静态文件与模板
@@ -107,7 +107,7 @@ def run_pipeline_from_image(
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     """主页"""
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse(request, "index.html")
 
 
 @app.post("/api/upload")
