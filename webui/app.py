@@ -39,7 +39,7 @@ logger = logging.getLogger("webui")
 app = FastAPI(
     title="Live2D Image Transformer",
     description="将图片转换为 Live2D 可动模型",
-    version="0.1.1",
+    version="0.2.0",
 )
 
 # 静态文件与模板
@@ -52,10 +52,25 @@ OUTPUT_ROOT = Path(os.environ.get("L2D_OUTPUT_DIR", base_dir.parent / "output"))
 OUTPUT_ROOT.mkdir(parents=True, exist_ok=True)
 
 
+def _check_sam_available():
+    """检查 SAM 是否可用。"""
+    model_path = base_dir.parent / "models" / "sam_vit_b_01ec64.pth"
+    if not model_path.exists():
+        return False
+    try:
+        import segment_anything  # noqa: F401
+        import torch  # noqa: F401
+        return True
+    except ImportError:
+        return False
+
+
 def run_pipeline_from_image(
     image: Image.Image,
     job_id: str,
     atlas_size: int = 2048,
+    use_sam: bool = True,
+    use_face: bool = True,
 ):
     """从 PIL Image 执行完整管线。"""
     job_dir = OUTPUT_ROOT / job_id
@@ -69,11 +84,41 @@ def run_pipeline_from_image(
 
     # Step 2: 图层分离
     logger.info(f"[{job_id}] 正在分离图层...")
-    layers, original_size = separate_layers(clean)
+    sam_available = _check_sam_available()
+
+    if use_sam and sam_available:
+        from core.segmentation.sam_segmentation import separate_layers_sam
+        logger.info(f"[{job_id}] 使用 SAM 像素级分割")
+        layers, original_size = separate_layers_sam(clean)
+    else:
+        logger.info(f"[{job_id}] 使用椭圆近似分割")
+        layers, original_size = separate_layers(clean)
+
+    # Step 2.5: 面部细节
+    face_details = None
+    face_info = {}
+    if use_face:
+        try:
+            from core.segmentation.face_details import detect_face_details
+            face_details = detect_face_details(clean)
+            if face_details:
+                face_info = face_details.to_dict()
+                logger.info(f"[{job_id}] 面部细节: {face_info}")
+        except Exception as e:
+            logger.warning(f"[{job_id}] 面部检测失败: {e}")
 
     # Step 3: 骨骼绑定
     logger.info(f"[{job_id}] 正在绑定骨骼...")
     rig = auto_rig(layers)
+
+    if face_details:
+        for param in rig.parameters:
+            if param.id == "ParamEyeLOpen":
+                param.default = face_details.left_eye.openness
+            elif param.id == "ParamEyeROpen":
+                param.default = face_details.right_eye.openness
+            elif param.id == "ParamMouthOpenY":
+                param.default = face_details.mouth.openness
 
     # Step 4: 导出
     logger.info(f"[{job_id}] 正在导出 Live2D...")
@@ -99,6 +144,8 @@ def run_pipeline_from_image(
         "num_layers": len(layers),
         "num_params": rig.metadata["total_parameters"],
         "zip_path": str(zip_path),
+        "sam_used": use_sam and sam_available,
+        "face_details": face_info,
     }
 
 
@@ -114,6 +161,8 @@ async def index(request: Request):
 async def upload_image(
     file: UploadFile = File(...),
     atlas_size: int = Form(2048),
+    use_sam: bool = Form(True),
+    use_face: bool = Form(True),
 ):
     """上传图片并执行管线"""
     if not file.content_type or not file.content_type.startswith("image/"):
@@ -129,6 +178,8 @@ async def upload_image(
             image=image,
             job_id=job_id,
             atlas_size=atlas_size,
+            use_sam=use_sam,
+            use_face=use_face,
         )
 
         return JSONResponse({
@@ -137,6 +188,8 @@ async def upload_image(
             "num_layers": result["num_layers"],
             "num_params": result["num_params"],
             "layers": result["layers"],
+            "sam_used": result["sam_used"],
+            "face_details": result.get("face_details", {}),
             "download_url": f"/api/download/{job_id}",
         })
 
@@ -161,7 +214,12 @@ async def download_model(job_id: str):
 
 @app.get("/api/health")
 async def health():
-    return {"status": "ok", "version": "0.1.0"}
+    sam_available = _check_sam_available()
+    return {
+        "status": "ok",
+        "version": "0.2.0",
+        "sam_available": sam_available,
+    }
 
 
 # === 启动入口 ===
